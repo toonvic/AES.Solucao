@@ -113,24 +113,6 @@ public class AlgoritmoAes
         }
     }
 
-    private void AdicionarResultado(string nomeRound, byte[,] matrizEstado)
-    {
-        _stringBuilder.AppendLine($"**** {nomeRound} ****");
-        for (int i = 0; i < matrizEstado.GetLength(0); i++)
-        {
-            for (int j = 0; j < matrizEstado.GetLength(1); j++)
-            {
-                if (j == 0)
-                {
-                    _stringBuilder.Append("0x");
-                }
-                _stringBuilder.Append($"{matrizEstado[j, i]:X2} ");
-            }
-            _stringBuilder.AppendLine();
-        }
-        _stringBuilder.AppendLine();
-    }
-
     public string Criptografar(string entrada, string chave, string nomeArquivo)
     {
         var composicao = GerarComposicaoChave(chave);
@@ -210,7 +192,9 @@ public class AlgoritmoAes
     private IList<List<byte[]>> GerarKeySchedule(List<byte[]> expansaoChave)
     {
         var keySchedule = new List<List<byte[]>>(11) { expansaoChave };
-        
+
+        _stringBuilder.Append("**** RoundKey=0 ****\n");
+
         AdicionarChaveExpandida(expansaoChave);
 
         for (int i = 1; i < 11; i++)
@@ -229,6 +213,8 @@ public class AlgoritmoAes
                 roundKeyNova.Add(novaPalavra);
             }
 
+            AdicionarChaveExpandida(roundKeyNova);
+
             keySchedule.Add(roundKeyNova);
         }
 
@@ -237,8 +223,6 @@ public class AlgoritmoAes
 
     private void AdicionarChaveExpandida(List<byte[]> expansaoChave)
     {
-        _stringBuilder.Append("**** RoundKey=0 ****\n");
-
         foreach (var palavra in expansaoChave)
         {
             AdicionarLinhaChave(palavra);
@@ -268,9 +252,17 @@ public class AlgoritmoAes
 
         var roundConstant = GerarRoundConstant(indexRoundKey);
 
+        _stringBuilder.AppendLine("   5) XOR de (3) com (4): " + ByteArrayToString(subWord) + " ^ " + ByteArrayToString(roundConstant));
+
         var resultadoXor = ExecutarXorBytes(subWord, roundConstant);
 
-        return ExecutarXorBytes(primeiraPalavra, resultadoXor);
+        _stringBuilder.AppendLine("      Resultado: " + ByteArrayToString(resultadoXor));
+
+        var resultadoXorSeis = ExecutarXorBytes(primeiraPalavra, resultadoXor);
+
+        _stringBuilder.AppendLine("   6) XOR 1a. palavra da roundkey anterior com (5): " + ByteArrayToString(resultadoXorSeis) + "\n");
+
+        return resultadoXorSeis;
     }
 
     private byte[] GerarRotWord(byte[] palavra)
@@ -292,8 +284,8 @@ public class AlgoritmoAes
         for (int i = 0; i < rotWord.Length; i++)
         {
             byte valor = rotWord[i];
-            byte linha = (byte)(valor >> 4);
-            byte coluna = (byte)(valor & 0x0F);
+            byte linha = (byte)BitMaisSignificativo(valor);
+            byte coluna = (byte)BitMenosSignificativo(valor);
             resultado[i] = MatrizSBox[linha, coluna];
         }
 
@@ -313,8 +305,6 @@ public class AlgoritmoAes
 
     private byte[] ExecutarXorBytes(byte[] primeiroValor, byte[] segundoValor)
     {
-        _stringBuilder.AppendLine("   5) XOR de (3) com (4): " + ByteArrayToString(primeiroValor) + " ^ " + ByteArrayToString(segundoValor));
-
         var resultado = new byte[primeiroValor.Length];
 
         for (int i = 0; i < primeiroValor.Length; i++)
@@ -322,7 +312,6 @@ public class AlgoritmoAes
             resultado[i] = (byte)(primeiroValor[i] ^ segundoValor[i]);
         }
 
-        _stringBuilder.AppendLine("      Resultado: " + ByteArrayToString(resultado) + "\n");
         return resultado;
     }
 
