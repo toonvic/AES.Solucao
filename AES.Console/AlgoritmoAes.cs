@@ -82,7 +82,7 @@ public class AlgoritmoAes
         var keySchedule = GerarKeySchedule(palavras);
 
         var blocos = PrepararBlocos(
-             Encoding.ASCII.GetBytes(entrada)
+            File.ReadAllBytes(entrada)
         );
 
         return ExecutarCriptografia(blocos, keySchedule, nomeArquivo);
